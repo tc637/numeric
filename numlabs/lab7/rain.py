@@ -246,9 +246,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 1 or 'sphinx-build' in sys.argv[0]:
         # Default to 50 time steps, and 9 grid points
         rain((50, 9))
+        plt.show()
     elif len(sys.argv) == 3:
         # Run with the number of time steps and grid point the user gave
         rain(sys.argv[1:])
+        plt.show()
     else:
         print ('Usage: rain n_time n_grid')
         print ('n_time = number of time steps; default = 5')

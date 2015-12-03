@@ -188,18 +188,50 @@ def calc_Vk(D, a, b):
     
 def upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j):
     
-    N_temp = np.zeros([Y])
-    M_temp = np.zeros([Y])
+    #N_temp = np.zeros([Y])
+    #M_temp = np.zeros([Y])
     
+    N_sum = 0
+    M_sum = 0
     # convert delta_D to m
     delta_D = delta_D*1e-3
     
-    for k in range(0,Y):
-        N_temp[k] = (nk[k,j] + dt/dz*(Vk[k]*nk[k,j+1]-Vk[k]*nk[k,j]))*delta_D
-        M_temp[k] = (mk[k,j] + dt/dz*(Vk[k]*mk[k,j+1]-Vk[k]*mk[k,j]))*delta_D
+    N_lim = np.max(N_array[i,:])
+    M_lim = np.max(M_array[i,:])
     
-    N_array[i+1,j] = np.sum(N_temp)
-    M_array[i+1,j] = np.sum(M_temp)
+    add_n = True
+    add_m = True
+    
+    for k in range(0,Y):
+
+        #N_temp[k] = (nk[i,j,k] + dt/dz*(Vk[k]*nk[i,j+1,k]-Vk[k]*nk[i,j,k]))
+        #M_temp[k] = (mk[i,j,k] + dt/dz*(Vk[k]*mk[i,j+1,k]-Vk[k]*mk[i,j,k]))
+
+        if add_n:
+            n_current_bin = nk[i,j,k] + dt/dz*(Vk[k]*nk[i,j+1,k]-Vk[k]*nk[i,j,k])
+            if (N_sum + n_current_bin) < N_lim: 
+                N_sum = N_sum + n_current_bin
+            else:
+                add_n = False
+            
+        if add_m:
+            m_current_bin = mk[i,j,k] + dt/dz*(Vk[k]*mk[i,j+1,k]-Vk[k]*mk[i,j,k])
+            if (M_sum + m_current_bin) < M_lim:
+                M_sum = M_sum + m_current_bin
+            else:
+                add_m = False
+                
+        if (add_n == False) and (add_m == False):
+            print("Hello")
+            print("i={} N={} M={}".format(i,N_sum,M_sum))
+            break
+
+            
+    #N_array[i+1,j] = np.sum(N_temp)*delta_D
+    #M_array[i+1,j] = np.sum(M_temp)*delta_D
+            
+    N_array[i+1,j] = N_sum        
+    M_array[i+1,j] = M_sum
     
     return N_array, M_array
     
@@ -246,12 +278,12 @@ for k in range(0,Y):
         Vk[k] = 10
  
  
- 
+fig,ax=plt.subplots(1,2,figsize=(6,6))
+nk = np.zeros([n_time, n_grid, Y])
+mk = np.zeros([n_time, n_grid, Y])
+
 for i in range(0,n_time-1):
     
-    nk = np.zeros([Y, n_grid])
-    mk = np.zeros([Y, n_grid])
-
     for j in range(0,n_grid):
                     
         if M_array[i,j] <= 0. or N_array[i,j] <= 0.:
@@ -262,23 +294,30 @@ for i in range(0,n_time-1):
             N0 = N_array[i,j]/beta*lamb**(alpha+1)
             
         for k in range(0,Y):
-            nk[k,j] = calc_nk(bins[k,:], N0, alpha, lamb, dD)
-            mk[k,j] = calc_mk(bins[k,:], N0, alpha, lamb, rho_w, dD)
+            nk[i,j,k] = calc_nk(bins[k,:], N0, alpha, lamb, dD)
+            mk[i,j,k] = calc_mk(bins[k,:], N0, alpha, lamb, rho_w, dD)
             
     for j in range(0,n_grid-1):
         N_array,M_array = upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j)
+
+
+for i in range(0,n_time):
+    ax[0].plot(i,np.sum(N_array[i,:]),'.b')
+    ax[1].plot(i,np.sum(M_array[i,:]),'.r')
+
     
+
 fig1,ax1 = plt.subplots(1,1,figsize=(6,6))
 fig2,ax2 = plt.subplots(1,1,figsize=(6,6))
 
 #for i in np.arange(0,1,3*dt):
-for i in np.arange(0,2):
+for i in np.arange(0,n_time+dt,5*dt):
     if i == 0:
         ax1.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz), '--g',label="t = {} s".format(i*dt))
         ax2.plot(N_array[i,:]/rho_a,np.arange(initvars.zmin,initvars.zmax,dz), '--g',label="t = {} s".format(i*dt))
     else:
         ax1.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
-        ax2.plot(N_array[i,:]*rho_a,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
+        ax2.plot(N_array[i,:]/rho_a,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
 ax1.set_xlim([0, 1.5])
 ax2.set_xlim([0, 15000])
 ax1.set_title(r"Advection of M with the Hybrid Scheme, $\alpha$ = {}".format(alpha))
@@ -287,7 +326,6 @@ ax1.set(xlabel=r"$M\ (g\ kg^{-1})$", ylabel=r"$z\ (m)$")
 ax2.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
 ax1.legend(loc="lower right")
 ax2.legend(loc="lower right")   
-    
-    
+ 
     
     

@@ -17,7 +17,7 @@ from scipy import special as sp
 plt.close('all')
 plt.style.use('ggplot')
 
-initialize = True
+initialize = False
 yaml_name = 'sedimentation.yaml'
 
 # function to load/restart yaml file, and initialize the dictionaries for easy edits
@@ -42,18 +42,18 @@ def upstream(N_array, M_array, i, j, Vn, Vm):
 def predictor(N_array, M_array, N_tilda, M_tilda, j, Vn, Vm, n_grid):
 
     if j != 0 or j != n_grid-1:
-        N_tilda[0,j] = N_array[0,j] + dt/(2*dz)*(Vn[0,j-1]*N_array[0,j-1] - 
+        N_tilda[0,j] = N_array[0,j] - dt/(2*dz)*(Vn[0,j-1]*N_array[0,j-1] - 
             Vn[i,j+1]*N_array[i,j+1])
-        M_tilda[0,j] = M_array[0,j] + dt/(2*dz)*(Vm[0,j-1]*M_array[0,j-1] - 
+        M_tilda[0,j] = M_array[0,j] - dt/(2*dz)*(Vm[0,j-1]*M_array[0,j-1] - 
             Vm[0,j+1]*M_array[0,j+1])
     
         if N_tilda[0,j] < 0:
-            N_tilda[0,j] = 0
+            N_tilda[0,j] = -N_tilda[0,j]
         elif N_tilda[0,j] > np.max(N_array[0,:]):
             N_tilda[0,j] = np.max(N_array[0,:])
         
         if M_tilda[0,j] < 0:
-            M_tilda[0,j] = 0
+            M_tilda[0,j] = -M_tilda[0,j]
         elif M_tilda[0,j] > np.max(M_array[0,:]):
             M_tilda[0,j] = np.max(M_array[0,:])
             
@@ -70,18 +70,18 @@ def mid_solution(N_array, M_array, N_tilda, M_tilda):
 def corrector(N_array, M_array, N_half, M_half, j, Vn, Vm, n_grid):
     
     if j != 0 or j != n_grid-1:
-        N_array[1,j] = N_array[0,j] + dt/(2*dz)*(Vn[0,j-1]*N_half[j-1] - 
+        N_array[1,j] = N_array[0,j] - dt/(2*dz)*(Vn[0,j-1]*N_half[j-1] - 
             Vn[0,j+1]*N_half[j+1])
-        M_array[1,j] = M_array[0,j] + dt/(2*dz)*(Vm[0,j-1]*M_half[j-1] - 
+        M_array[1,j] = M_array[0,j] - dt/(2*dz)*(Vm[0,j-1]*M_half[j-1] - 
             Vm[0,j+1]*M_half[j+1])
             
         if N_array[1,j] < 0:
-            N_array[1,j] = 0
+            N_array[1,j] = -N_array[1,j]
         elif N_array[1,j] > np.max(N_array[0,:]):
             N_array[1,j] = np.max(N_array[0,:])
         
         if M_array[1,j] < 0:
-            M_array[1,j] = 0
+            M_array[1,j] = -M_array[1,j]
         elif M_array[1,j] > np.max(M_array[0,:]):
             M_array[1,j] = np.max(M_array[0,:])
     
@@ -91,20 +91,20 @@ def corrector(N_array, M_array, N_half, M_half, j, Vn, Vm, n_grid):
 def leapfrog(N_array, M_array, i, j, Vn, Vm, n_grid):
     
     if j != 0 or j != n_grid-1:
-        N_array[i+1,j] = N_array[i-1,j] + dt/dz*(Vn[i,j-1]*N_array[i,j-1] - 
+        N_array[i+1,j] = N_array[i-1,j] - dt/dz*(Vn[i,j-1]*N_array[i,j-1] - 
             Vn[i,j+1]*N_array[i,j+1])
-        M_array[i+1,j] = M_array[i-1,j] + dt/dz*(Vm[i,j-1]*M_array[i,j-1] - 
+        M_array[i+1,j] = M_array[i-1,j] - dt/dz*(Vm[i,j-1]*M_array[i,j-1] - 
             Vm[i,j+1]*M_array[i,j+1])
             
         if N_array[i,j] < 0:
-            N_array[i,j] = 0
-        elif N_array[i,j] > np.max(N_array[i,:]):
-            N_array[i,j] = np.max(N_array[i,:])
+            N_array[i,j] = -N_array[i,j]
+        elif N_array[i,j] > np.max(N_array[0,:]):
+            N_array[i,j] = np.max(N_array[0,:])
         
         if M_array[i,j] < 0:
-            M_array[i,j] = 0
-        elif M_array[i,j] > np.max(M_array[i,:]):
-            M_array[i,j] = np.max(M_array[i,:])
+            M_array[i,j] = -M_array[i,j]
+        elif M_array[i,j] > np.max(M_array[0,:]):
+            M_array[i,j] = np.max(M_array[0,:])
 
     return N_array,M_array
 
@@ -337,7 +337,7 @@ ax3.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
 
 ################################################
 
-"""
+
 M_array = np.zeros([n_time, n_grid])
 N_array = np.zeros([n_time, n_grid])
 
@@ -362,8 +362,8 @@ Vn = np.zeros([n_time, n_grid])
 
 for i in range(0,n_time-1):
 
-    for j in range(0,n_grid):
-        if M_array[i,j] == 0. or N_array[i,j] == 0.:
+    for j in range(0,n_grid): #n_grid
+        if M_array[i,j] <= 0. or N_array[i,j] <= 0.:
             lamb = 0.
             N0 = 0.
             Vn[i,j] = 0.
@@ -373,13 +373,13 @@ for i in range(0,n_time-1):
             N0 = N_array[i,j]/beta*lamb**(alpha+1)
             Vn[i,j] = (a/lamb**b)*sp.gamma(alpha+b+1)/sp.gamma(alpha+1)
             Vm[i,j] = (a/lamb**b)*sp.gamma(alpha+b+4)/sp.gamma(alpha+4)
-            
+        
         if Vm[i,j] > 10:
             Vm[i,j] = 10
         
         if Vn[i,j] > 10:
             Vn[i,j] = 10
-
+        
     if i == 0:
         N_tilda = np.zeros([1,n_grid])    
         M_tilda = np.zeros([1,n_grid])
@@ -396,23 +396,23 @@ for i in range(0,n_time-1):
             N_array,M_array = leapfrog(N_array, M_array, i, j, Vn, Vm, n_grid)
         
 
-fig3,ax3 = plt.subplots(1,1,figsize=(6,6))
-fig4,ax4 = plt.subplots(1,1,figsize=(6,6))
+fig11,ax11 = plt.subplots(1,1,figsize=(6,6))
+fig12,ax12 = plt.subplots(1,1,figsize=(6,6))
 
-for i in np.arange(0,n_time,2*dt):
+for i in np.arange(0,n_time,5*dt):
     if i == 0:
-        ax3.plot(M_array[i,:],np.arange(initvars.zmin,initvars.zmax,dz), '--m',label="t = {}".format(i*dt))
-        ax4.plot(N_array[i,:],np.arange(initvars.zmin,initvars.zmax,dz), '--m',label="t = {}".format(i*dt))
+        ax11.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz), '--m',label="t = {}".format(i*dt))
+        ax12.plot(N_array[i,:]/1.225,np.arange(initvars.zmin,initvars.zmax,dz), '--m',label="t = {}".format(i*dt))
     else:
-        ax3.plot(M_array[i,:],np.arange(initvars.zmin,initvars.zmax,dz),label="t = {}".format(i*dt))
-        ax4.plot(N_array[i,:],np.arange(initvars.zmin,initvars.zmax,dz),label="t = {}".format(i*dt))
-ax3.set_xlim([0, 1.5])
-ax4.set_xlim([0, 15000])
-ax3.set_title("M Leapfrog")
-ax4.set_title("N Leapfrog")
-ax3.legend()
-ax4.legend()
-"""
+        ax11.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {}".format(i*dt))
+        ax12.plot(N_array[i,:]/1.225,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {}".format(i*dt))
+ax11.set_xlim([-0.5, 1.5])
+ax12.set_xlim([-1000, 15000])
+ax11.set_title("M Leapfrog")
+ax12.set_title("N Leapfrog")
+ax11.legend(loc="lower right")
+ax12.legend(loc="lower right")
+
 
 
 
@@ -420,6 +420,7 @@ ax4.legend()
 ######################################################
 # hybrid
 
+"""
 def calc_nk(D, N0, alpha, lamb, dD):
     lamb = lamb*1e3
     D = D*1e3
@@ -541,8 +542,9 @@ ax6.set(xlabel=r"$M\ (g\ kg^{-1})$", ylabel=r"$z\ (m)$")
 ax7.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
 ax6.legend(loc="best")
 ax7.legend(loc="best")
+"""
 
-
+"""
 #####################################################
 # gamma distribution
 fig10,ax10 = plt.subplots(1,1,figsize=(6,6))
@@ -556,3 +558,4 @@ for param in params:
 ax10.legend(loc="best")
 ax10.set(title="Raindrop PSDs with Different Parameters", xlabel="Diameter (mm)", 
         ylabel="Number")
+"""

@@ -1,0 +1,28 @@
+timevars:
+  dt: 3.0
+  tend: 100.0
+  tstart: 0.0
+uservars:
+  a: 842
+  alpha: 0
+  b: 0.8
+  rho_a: 1.225
+  rho_w: 1000
+initvars:
+  M: 1
+  N: 10000.0
+  Nbot: 4300
+  Ntop: 5050
+  dz: 100
+  zmax: 6000
+  zmin: 0
+adaptvars:
+  atol: 1.0e-05
+  dtfailmax: 0.5
+  dtfailmin: 0.1
+  dtpassmax: 5.0
+  dtpassmin: 0.1
+  maxfail: 60.0
+  maxsteps: 2000.0
+  rtol: 1.0e-05
+  s: 0.9

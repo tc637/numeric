@@ -17,6 +17,8 @@ plt.style.use('ggplot')
 
 initialize = False
 yaml_name = 'sedimentation.yaml'
+fontsize = 28
+ticksize = 20
 
 # function to load/restart yaml file, and initialize the dictionaries for easy edits
 def reset_params():
@@ -105,6 +107,19 @@ def leapfrog(N_array, M_array, i, j, Vn, Vm, n_grid):
             M_array[i,j] = np.max(M_array[0,:])
 
     return N_array,M_array
+    
+def set_labels(axis, titlestr, xlabel, ylabel, fontsize, ticksize, legend=True):
+    
+    axis.set_title(titlestr, fontsize=fontsize, fontweight="bold")
+    axis.set_xlabel(xlabel, fontsize=fontsize, fontweight="bold")
+    axis.set_ylabel(ylabel, fontsize=fontsize, fontweight="bold")
+    axis.tick_params(axis='x',labelsize=ticksize)
+    axis.tick_params(axis='y',labelsize=ticksize)
+    
+    if legend:
+        axis.legend(loc="lower right", fontsize=fontsize)
+
+    return None
 
 if initialize:
     timevars={'timevars':{'dt':3.,'tstart':0.0,'tend':240.0}}
@@ -194,7 +209,7 @@ def upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j):
     N_sum = 0
     M_sum = 0
     # convert delta_D to m
-    delta_D = delta_D*1e-3
+    delta_D = delta_D
     
     N_lim = np.max(N_array[i,:])
     M_lim = np.max(M_array[i,:])
@@ -208,18 +223,18 @@ def upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j):
         #M_temp[k] = (mk[i,j,k] + dt/dz*(Vk[k]*mk[i,j+1,k]-Vk[k]*mk[i,j,k]))
 
         if add_n:
-            n_current_bin = nk[i,j,k] + dt/dz*(Vk[k]*nk[i,j+1,k]-Vk[k]*nk[i,j,k])
+            n_current_bin =(nk[i,j,k] + dt/dz*(Vk[k]*nk[i,j+1,k]-Vk[k]*nk[i,j,k]))
             if (N_sum + n_current_bin) < N_lim: 
                 N_sum = N_sum + n_current_bin
-            else:
-                add_n = False
+            #else:
+                #add_n = False
             
         if add_m:
-            m_current_bin = mk[i,j,k] + dt/dz*(Vk[k]*mk[i,j+1,k]-Vk[k]*mk[i,j,k])
+            m_current_bin = (mk[i,j,k] + dt/dz*(Vk[k]*mk[i,j+1,k]-Vk[k]*mk[i,j,k]))
             if (M_sum + m_current_bin) < M_lim:
                 M_sum = M_sum + m_current_bin
-            else:
-                add_m = False
+            #else:
+                #add_m = False
                 
         if (add_n == False) and (add_m == False):
             print("Hello")
@@ -238,7 +253,7 @@ def upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j):
     
 a = uservars.a
 b = uservars.b
-alpha = uservars.alpha
+alpha = 10
 rho_w = uservars.rho_w
 rho_a = uservars.rho_a
 gamma = np.pi/6.*rho_w*sp.gamma(alpha+4)
@@ -247,7 +262,7 @@ dt = timevars.dt
 dz = initvars.dz
 
 dD = 0.01 # mm
-D_array = np.arange(0,4,dD) # mm
+D_array = np.arange(0,5,dD) # mm
 Y = 10
 
 delta_D = D_array.shape[0]/Y
@@ -320,12 +335,18 @@ for i in np.arange(0,n_time+dt,5*dt):
         ax2.plot(N_array[i,:]/rho_a,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
 ax1.set_xlim([0, 1.5])
 ax2.set_xlim([0, 15000])
-ax1.set_title(r"Advection of M with the Hybrid Scheme, $\alpha$ = {}".format(alpha))
-ax2.set_title(r"Advection of N with the Hybrid Scheme, $\alpha$ = {}".format(alpha))
-ax1.set(xlabel=r"$M\ (g\ kg^{-1})$", ylabel=r"$z\ (m)$")
-ax2.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
-ax1.legend(loc="lower right")
-ax2.legend(loc="lower right")   
+
+titlestr = r"Advection of M with the Upwind-Hybrid Scheme, $\alpha$ = {}".format(alpha)
+xlabel = r"$M\ (g\ kg^{-1})$"
+ylabel = r"$z\ (m)$"
+set_labels(ax1, titlestr, xlabel, ylabel, fontsize, ticksize, legend=True)
+
+titlestr = r"Advection of N with the Upwind-Hybrid Scheme, $\alpha$ = {}".format(alpha)
+xlabel = r"$N\ (kg^{-1})$"
+ylabel = r"$z\ (m)$"
+set_labels(ax2, titlestr, xlabel, ylabel, fontsize, ticksize, legend=True)
+
+
  
     
     

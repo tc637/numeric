@@ -19,6 +19,8 @@ plt.style.use('ggplot')
 
 initialize = False
 yaml_name = 'sedimentation.yaml'
+fontsize=28
+ticksize=20
 
 # function to load/restart yaml file, and initialize the dictionaries for easy edits
 def reset_params():
@@ -108,6 +110,19 @@ def leapfrog(N_array, M_array, i, j, Vn, Vm, n_grid):
 
     return N_array,M_array
 
+def set_labels(axis, titlestr, xlabel, ylabel, fontsize, ticksize, legend=True):
+    
+    axis.set_title(titlestr, fontsize=fontsize, fontweight="bold")
+    axis.set_xlabel(xlabel, fontsize=fontsize, fontweight="bold")
+    axis.set_ylabel(ylabel, fontsize=fontsize, fontweight="bold")
+    axis.tick_params(axis='x',labelsize=ticksize)
+    axis.tick_params(axis='y',labelsize=ticksize)
+    
+    if legend:
+        axis.legend(loc="lower right", fontsize=fontsize)
+
+    return None
+    
 if initialize:
     timevars={'timevars':{'dt':3.,'tstart':0.0,'tend':240.0}}
     # constants
@@ -214,12 +229,17 @@ for i in np.arange(0,n_time+dt,5*dt):
         ax2.plot(N_array[i,:]/rho_a,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
 ax1.set_xlim([0, 1.5])
 ax2.set_xlim([0, 15000])
-ax1.set_title(r"Advection of M with the Bulk Scheme, $\alpha$ = {}".format(alpha))
-ax2.set_title(r"Advection of N with the Bulk Scheme, $\alpha$ = {}".format(alpha))
-ax1.set(xlabel=r"$M\ (g\ kg^{-1})$", ylabel=r"$z\ (m)$")
-ax2.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
-ax1.legend(loc="lower right")
-ax2.legend(loc="lower right")
+
+titlestr = r"Advection of M with the Upstream-Bulk Scheme, $\alpha$ = {}".format(alpha)
+xlabel = r"$M\ (g\ kg^{-1})$"
+ylabel = r"$z\ (m)$"
+set_labels(ax1, titlestr, xlabel, ylabel, fontsize, ticksize)
+
+titlestr = r"Advection of N with the Upstream-Bulk Scheme, $\alpha$ = {}".format(alpha)
+xlabel = r"$N\ (kg^{-1})$"
+ylabel = r"$z\ (m)$"
+set_labels(ax2, titlestr, xlabel, ylabel, fontsize, ticksize)
+
 
 ###############
 # Courant
@@ -279,10 +299,14 @@ fig5,ax5 = plt.subplots(1,1,figsize=(6,6))
 
 ax4.plot(dt*np.arange(0,n_time),maxm)
 ax5.plot(dt*np.arange(0,n_time),maxn,'-b')
-ax4.set_title(r"Max Courant Number for M, $\Delta t$ = {} s, $\Delta z$ = {} m".format(dt,dz))
-ax5.set_title(r"Max Courant Number for N, $\Delta t$ = {} s, $\Delta z$ = {} m".format(dt,dz))
-ax4.set(xlabel=r"$t\ (s)$", ylabel=r"$C$")
-ax5.set(xlabel=r"$t\ (s)$", ylabel=r"$C$")
+
+titlestr = r"Max Courant Number for M, Upstream-Bulk, $\alpha$ = {}".format(alpha)
+xlabel = r"$t\ (s)$"
+ylabel = r"$C$"
+set_labels(ax4, titlestr, xlabel, ylabel, fontsize, ticksize, legend=False)
+
+titlestr = r"Max Courant Number for N, Upstream-Bulk, $\alpha$ = {}".format(alpha)
+set_labels(ax5, titlestr, xlabel, ylabel, fontsize, ticksize, legend=False)
 
 breakn = 11
 breakm = 8
@@ -417,133 +441,7 @@ ax12.legend(loc="lower right")
 
 
 
-######################################################
-# hybrid
-
-"""
-def calc_nk(D, N0, alpha, lamb, dD):
-    lamb = lamb*1e3
-    D = D*1e3
-    nk = np.sum([N0*((each_D)**alpha)*np.exp(-lamb*each_D) for each_D in D])*dD
-    
-    return nk
-    
-def calc_mk(D, N0, alpha, lamb, rho_w, dD):
-    lamb = lamb*1e3
-    D = D*1e3
-    mk = np.sum([np.pi/6*rho_w*((each_D)**3)*N0*(each_D)**alpha*np.exp(-lamb*each_D) for each_D in D])*dD
-    
-    return mk
-    
-def calc_Vk(D, a, b):
-    Vk = a*(np.mean(D)**b)
-    
-    return Vk
-    
-def upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j):
-    
-    N_temp = np.zeros([Y])
-    M_temp = np.zeros([Y])
-    
-    for k in range(0,Y):
-        N_temp[k] = (nk[k,j] + dt/dz*(Vk[k]*nk[k,j+1]-Vk[k]*nk[k,j]))*delta_D
-        M_temp[k] = (mk[k,j] + dt/dz*(Vk[k]*mk[k,j+1]-Vk[k]*mk[k,j]))*delta_D
-    
-    N_array[i+1,j] = np.sum(N_temp)
-    M_array[i+1,j] = np.sum(M_temp)
-    
-    return N_array, M_array
-    
-    
-dD = 0.0001
-D_array = np.arange(0,4+dD,dD) # mm
-Y = 10
-
-bin_width_index = 40
-delta_D = bin_width_index * Y
-
-bins = np.zeros([Y, bin_width_index])
-
-for k in range(0,Y):
-    bins[k,:] = D_array[k*bin_width_index:40+k*bin_width_index]
-
-
-M_array = np.zeros([n_time, n_grid])
-N_array = np.zeros([n_time, n_grid])
-
-M_array[0,rainbot:raintop+1] = initvars.M
-M_array[:, 0] = 0
-M_array[:, -1] = 0
-N_array[0,rainbot:raintop+1] = initvars.N
-N_array[:, 0] = 0
-N_array[:, -1] = 0
-gamma = np.pi/6.*rho_w*sp.gamma(alpha+4)
-beta = sp.gamma(alpha+1)
-a = uservars.a
-b = uservars.b
-alpha = uservars.alpha
-rho_w = uservars.rho_w
-dt = timevars.dt
-dz = initvars.dz
-
-# calculate Vk first
-Vk = np.zeros([Y])
-
-for k in range(0,Y):
-    Vk[k] = calc_Vk(bins[k,:], a, b)
-    if Vk[k] > 10:
-        Vk[k] = 10
-    
-# then integrate everything else
-for i in range(0,n_time-1):
-    
-    nk = np.zeros([Y, n_grid])
-    mk = np.zeros([Y, n_grid])
-
-    for j in range(0,n_grid):
-                    
-        if M_array[i,j] <= 0. or N_array[i,j] <= 0.:
-            lamb = 0.
-            N0 = 0.
-        else:
-            lamb = ((gamma*N_array[i,j])/(beta*M_array[i,j]))**(1./3)
-            N0 = N_array[i,j]/beta*lamb**(alpha+1)
-            if i == 0 or i == 1:
-                print(lamb)
-                print(N0)
-            
-        for k in range(0,Y):
-            nk[k,j] = calc_nk(bins[k,:], N0, alpha, lamb, dD)
-            mk[k,j] = calc_mk(bins[k,:], N0, alpha, lamb, rho_w, dD)
-            
-       
-            
-    for j in range(0,n_grid-1):
-        N_array,M_array = upstream_bins(nk, mk, Vk, delta_D, Y, N_array, M_array, i, j)
-        
-
-
-fig6,ax6 = plt.subplots(1,1,figsize=(6,6))
-fig7,ax7 = plt.subplots(1,1,figsize=(6,6))
-
-#for i in np.arange(0,1,3*dt):
-for i in np.arange(0,2):
-    if i == 0:
-        ax6.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz), '--g',label="t = {} s".format(i*dt))
-        ax7.plot(N_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz), '--g',label="t = {} s".format(i*dt))
-    else:
-        ax6.plot(M_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
-        ax7.plot(N_array[i,:]*1e3,np.arange(initvars.zmin,initvars.zmax,dz),label="t = {} s".format(i*dt))
-ax6.set_xlim([0, 1.5])
-ax7.set_xlim([0, 15000])
-ax6.set_title(r"Advection of M with the Hybrid Scheme, $\alpha$ = {}".format(alpha))
-ax7.set_title(r"Advection of N with the Hybrid Scheme, $\alpha$ = {}".format(alpha))
-ax6.set(xlabel=r"$M\ (g\ kg^{-1})$", ylabel=r"$z\ (m)$")
-ax7.set(xlabel=r"$N\ (kg^{-1})$", ylabel=r"$z\ (m)$")
-ax6.legend(loc="best")
-ax7.legend(loc="best")
-"""
-
+#####################################################
 """
 #####################################################
 # gamma distribution
